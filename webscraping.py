@@ -1,70 +1,69 @@
 import streams
 
-def calculate_average_champion_wr(team):
-    team_overall = 0
-    for i in range(0,5):
-        wr = team["Preseason Champion Information"][i].split("%")[0]
-            #add 45 for players who are playing a character for the first time
-        if wr == "-":
-            team_overall += 45
-        else:
-            team_overall += int(wr)
-    return team_overall
-
-def higher_champ_wr_value(blue_team, red_team):
-    blue_wr_avg = calculate_average_champion_wr(blue_team)
-    red_wr_avg = calculate_average_champion_wr(red_team)
-    print(blue_wr_avg, red_wr_avg)
-    if blue_wr_avg > red_wr_avg:
-        return "BLUE"
-    else:
-        return "RED"
-
-#here we make a crude calculation of the rank of each player and the team average
-def calculate_average_LP(team):
-    accepted_ranks = ["master","grandmaster","challenger"]
-    team_overall = 0
+def champion_wr_value(player_stats):
+    if (player_stats == "-"):
+        return 0
+    wr = player_stats.split("%")[0]
+    games = player_stats.split("(")[1][:-8]     
     
+    value = 0
+    games = int(games)
+    wr = float(wr)/100
+        
+    if 0 < games < 15:
+        value = wr * 0.5
+    if 15 <= games < 30:
+        value = wr * 0.65
+    if 30 <= games < 50:
+        value = wr * 0.75
+    if 50 <= games < 75:
+        value = wr * 0.80
+    if 75 <= games < 150:
+        value = wr * 0.90
+    if 150 < games:
+        value = wr * 1
+    return value
+
+def player_wr_value(player_stats):
+    wr = player_stats.split("%")[0]
+    games = player_stats.split("(")[1][:-8]  
+        
+    value = 0
+    games = int(games)
+    wr = float(wr)/100
+        
+    if 0 < games < 50:
+        value = wr * 0.5
+    if 50 <= games < 75:
+        value = wr * 0.6
+    if 75 <= games < 150:
+        value = wr * 0.75
+    if 150 <= games < 300:
+        value = wr * 0.8
+    if 300 <= games < 500:
+        value = wr * 0.9
+    if 500 < games < 1000:
+        value = wr * 0.95
+    if 1000 < games:
+        value = wr * 1
+    return value
+
+def compute_team_value(team):
+    team_overall = 0
     for i in range(0,5):
-        #cleaning the parsed data removing brackets and taking tier/LP
-        split = team["Preseason.1"][i].split("(")
-        tier = split[0]
+        champ_wr = champion_wr_value(team["Preseason Champion Information"][i])
+        player_wr = player_wr_value(team["Ranked Winratio"][i])
         
-        #slice off last 3 digits to remove "LP)"
-        LP = split[1][:-3]
+        team_overall += champ_wr
+        team_overall  += player_wr
         
-        #if the player is not within the top 3 rank tiers thier values are not counted
-        if tier in accepted_ranks:
-            team_overall += int(LP)
-            
     return team_overall
 
-#find which of the two teams has a higher LP average
-def higher_avg_LP_value(blue_team,red_team):
-    blue_LP_avg = calculate_average_LP(blue_team)
-    red_LP_avg = calculate_average_LP(red_team)
-    print(blue_LP_avg, red_LP_avg)
-    if blue_LP_avg > red_LP_avg:
-        return "BLUE"
-    else:
-        return "RED"
-
-def find_winner(blue_team, red_team):
-    blue = 0
-    red = 1
-    #red starts with one more point because the matchmaking system makes the red side have the higher MMR players
-    #there is probably a better way to implement this
-    if (higher_champ_wr_value(blue_team,red_team)) == "RED":
-        red += 1
-    else:
-        blue += 1
-        
-    if (higher_avg_LP_value(blue_team, red_team)) == "RED":
-        red += 1
-    else:
-        blue += 1
-        
-    if red > blue:
+def return_winning_team(blue_team, red_team):
+    blue_value = compute_team_value(blue_team)
+    red_value = compute_team_value(red_team)
+    
+    if red_value >= blue_value:
         return "RED"
     else:
         return "BLUE"
@@ -84,8 +83,7 @@ def win_loss_prediction_answer(blue_team, red_team, streamer):
     #use this to replace html spaces with string spaces
     IGN = IGN.replace("%20" , " ")
     #compute winner using our methods
-    winner = find_winner(blue_team, red_team)
-    #find which team the player is on
+    winner = return_winning_team(blue_team, red_team)
     teamOfStreamer = find_team_of_streamer(blue_team, red_team, IGN)
 
     #if they match we return true to bet yes

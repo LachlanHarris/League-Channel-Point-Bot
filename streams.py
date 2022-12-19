@@ -10,4 +10,5 @@ Streams = {
     "lourlo": "https://www.op.gg/summoners/kr/spin%20on%20rock/ingame",
     "spear_shot": "https://www.op.gg/summoners/euw/Spear%20Shot/ingame",
     "karasmai": "https://www.op.gg/summoners/na/OnThatBeastMode/ingame",
+    "midbeast": "https://www.op.gg/summoners/oce/midbeast/ingame"
 }

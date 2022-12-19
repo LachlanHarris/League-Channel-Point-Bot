@@ -21,4 +21,4 @@ Paths= {
 }
 
 accepted_terms_yes = ["win", "yes", "yeah", "ye", "ofc", "ofcourse","yep", "yup", "surely"]
-accepted_terms_no = ["loss", "lose", "no","nah","noppers"]
+accepted_terms_no = ["loss", "lose", "no","nah","noppers", "nop"]

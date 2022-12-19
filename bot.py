@@ -148,6 +148,67 @@ def cast_prediction(driver, option, bet_amount):
     option1SubmitButton.click()
     print("BET PLACED ON OPTION " + option +  "FOR " + bet_amount )
 
+def main_loop_body(driver, window_handle):
+    driver.switch_to.window(window_handle)
+
+    button = driver.find_element(By.XPATH, paths.Paths["pointButton"])
+    button.click()
+
+    channelPoints = get_and_format_points(button)
+
+    #if there is no prediction field active (if check_live_prediction returned false)
+    if not check_active_prediction(driver):
+        button.click()
+        return
+
+    predictionButton = driver.find_element(By.XPATH,paths.Paths["predictionButton"])
+    #check to see if the prediction data scraping failed
+    if live_prediction_data_scraper(driver, predictionButton) == False:
+        button.click()
+        return
+    title, status, option1, option2 = live_prediction_data_scraper(driver, predictionButton)
+    
+    #if the prediction is not currently open
+    if "Submissions closing in" not in status:
+        print("status of the bet is not currently open: " + status)
+        button.click()
+        return
+
+    #classify what kind of prediction we have
+    predictionType = prediction_classifier(title, option1, option2)
+    #select bet with a custom amount
+    custom_prediction = driver.find_element(By.XPATH,paths.Paths["predictionCustomAmount"])
+    custom_prediction.click()
+    
+    #if the prediction is of type win/loss
+    if predictionType == "win/loss":
+        scraping_result = data_scraper(driver)
+        win_option = win_option_finder(driver)
+
+        #guard clauses for if either scraping operator fails
+        if scraping_result == False:
+            button.click()
+            return
+        if win_option == False:
+            print("the options could not be understood resulting in the bet being skipped")
+            button.click()
+            return
+
+        blue_team = scraping_result[0]   
+        red_team = scraping_result[1]
+        streamer = scraping_result[2]
+        predictionBool = webscraping.win_loss_prediction_answer(blue_team,red_team,streamer)
+
+        #guard clause to prevent non parsed result
+        bet_amount = "100"
+        optionToBet = compare_results(predictionBool, win_option)
+        cast_prediction(driver, optionToBet, bet_amount)
+
+    #click the points button again to close it so the next loop can open it again
+    driver.switch_to.window(window_handle)
+    button = driver.find_element(By.XPATH, paths.Paths["pointButton"])
+    button.click()
+
 
 def main():
     driver = webdriver_setup()
@@ -155,66 +216,10 @@ def main():
     try:
         while True:
             for window_handle in driver.window_handles:
-                driver.switch_to.window(window_handle)
-                
-                button = driver.find_element(By.XPATH, paths.Paths["pointButton"])
-                channelPoints = get_and_format_points(button)
-                button.click()
-
-                #if there is a prediction field active (if check_live_prediction returned true)
-                if check_active_prediction(driver):
-                    predictionButton = driver.find_element(By.XPATH,paths.Paths["predictionButton"])
-                    
-                    #check to see if the prediction data scraping failed
-                    if live_prediction_data_scraper(driver, predictionButton) == False:
-                        continue
-                    title, status, option1, option2 = live_prediction_data_scraper(driver, predictionButton)
-                    
-                    #if the prediction is currently open
-                    if "Submissions closing in" in status:
-
-                        #classify what kind of prediction we have
-                        predictionType = prediction_classifier(title, option1, option2)
-                        #select bet with a custom amount
-                        custom_prediction = driver.find_element(By.XPATH,paths.Paths["predictionCustomAmount"])
-                        custom_prediction.click()
-                        
-                        #if the prediction is of type win/loss
-                        if predictionType == "win/loss":
-                            scraping_result = data_scraper(driver)
-                            win_option = win_option_finder(driver)
-
-                            #guard clauses for if either scraping operator fails
-                            if scraping_result == False:
-                                button.click()
-                                continue
-                            if win_option == False:
-                                print("the options could not be understood resulting in the bet being skipped")
-                                continue
-
-                            blue_team = scraping_result[0]   
-                            red_team = scraping_result[1]
-                            streamer = scraping_result[2]
-                            predictionBool = webscraping.win_loss_prediction_answer(blue_team,red_team,streamer)
-
-                            #guard clause to prevent non parsed result
-
-                            bet_amount = "100"
-                            optionToBet = compare_results(predictionBool, win_option)
-                            cast_prediction(driver, optionToBet, bet_amount)
-
-                    #else the prediction is closed or is awaiting results
-                    else:
-                        print("status of the bet is not currently open: " + status)
-
-                #click the points button again to close it so the next loop can open it again
-                driver.switch_to.window(window_handle)
-                button = driver.find_element(By.XPATH, paths.Paths["pointButton"])
-                button.click()
-
-            #once it finishes checking each channel for a prediction it will rest for 45 seconds
-            time.sleep(45)
-
+                #call loop body
+                main_loop_body(driver, window_handle)
+            #wait a minute before next
+            time.sleep(60)
     except KeyboardInterrupt:
         print("interrupted")
     finally:
