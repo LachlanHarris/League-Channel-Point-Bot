@@ -1,4 +1,4 @@
-
+import streams
 
 def calculate_average_champion_wr(team):
     team_overall = 0
@@ -76,3 +76,22 @@ def find_team_of_streamer(blue_team, red_team, streamer):
     for x in red_team[red_team.columns[3]]:
         if x == streamer:
             return "RED"
+
+def win_loss_prediction_answer(blue_team, red_team, streamer):
+    #find in game name from streamer name
+    IGN = streams.Streams[streamer].split("/")
+    IGN = IGN [-2]
+    #use this to replace html spaces with string spaces
+    IGN = IGN.replace("%20" , " ")
+    #compute winner using our methods
+    winner = find_winner(blue_team, red_team)
+    #find which team the player is on
+    teamOfStreamer = find_team_of_streamer(blue_team, red_team, IGN)
+
+    #if they match we return true to bet yes
+    #if they dont we return false to bet no 
+    if winner == teamOfStreamer:
+        return True
+    else:
+        return False
+
